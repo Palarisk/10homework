@@ -34,12 +34,30 @@ Promise.all([
     console.log('Failed with', err)
   })
 
+let coordinateStore = d3.map()
+
 function ready([flights, airportCodes, json]) {
-  console.log(json.objects)
+  airportCodes.forEach(d => {
+    let name = d.iata_code
+    let coords = [d.longitude, d.latitude]
+    coordinateStore.set(name, coords)
+  })
+
+
+  //console.log(json.objects)
   let countries = topojson.feature(json, json.objects.countries)
  // console.log(countries)
 
-  console.log(flights)
+  //console.log(flights)
+
+  projection.fitSize([width, height], countries)
+
+    svg.append('path')  
+      .datum({type: 'Sphere'})
+      .attr('d', path)
+      .attr('fill', 'lightblue')
+      .attr('stroke', 'black')
+      .attr('stroke-width', 2)
 
   svg
     .selectAll('.country')
@@ -48,7 +66,9 @@ function ready([flights, airportCodes, json]) {
     .append('path')
     .attr('class', 'country')
     .attr('d', path)
-
+    .attr('fill', 'lightgrey')
+    .attr('stroke', 'black')
+    .attr('stroke-width', 0.7)
 
   svg
     .selectAll('.city')
@@ -56,15 +76,39 @@ function ready([flights, airportCodes, json]) {
     .enter()
     .append('circle')
     .attr('class', 'city')
-    .attr('r', 1)
-    .attr('fill', 'yellow')
+    .attr('r', 2)
+    .attr('fill', 'white')
     .attr('transform', d => {
       let coords = projection([d.longitude, d.latitude])
       return `translate(${coords})`
     })
 
- 
-    
+   svg.selectAll('.flights')
+    .data(airportCodes)
+    .enter().append('path')
+    .attr('d', d => {
+      // What is the 'from' city?
+      console.log(d)
+      // Get the coordinates based on that city's name
+      console.log(coordinateStore.get(d.iata_code))
+
+      // Pull out our coordinates
+      let fromCoords = ([-73.781187,40.645477])
+      let toCoords = coordinateStore.get(d.iata_code)
+
+      // Build a GeoJSON LineString
+      var geoLine = {
+        type: 'LineString',
+        coordinates: [fromCoords, toCoords]
+      }
+
+
+      // Feed that to our d3.geoPath()
+      return path(geoLine)
+    })
+    .attr('fill', 'none')
+    .attr('stroke', 'white')
+
 
   // console.log(graticule())
 /*
